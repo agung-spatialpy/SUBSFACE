@@ -1,0 +1,1171 @@
+
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SUBSIDENCE SURFACE | CTRA TEAM</title>
+
+    <!-- LEAFLET CSS -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <!-- CHART.JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+    <style>
+
+        /* ==========================================
+           1. PENGATURAN DASAR
+        ========================================== */
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            overflow: hidden;
+        }
+
+
+        /* ==========================================
+           2. PETA FULLSCREEN
+        ========================================== */
+
+        #map {
+            position: fixed;
+            top: 0;
+            left: 0;
+
+            width: 100%;
+            height: 100vh;
+
+            z-index: 1;
+        }
+
+
+        /* ==========================================
+           3. HEADER
+        ========================================== */
+
+        header {
+            position: fixed;
+
+            top: 12px;
+            left: 12px;
+            right: 85px;
+
+            z-index: 1001;
+
+            background: rgba(18, 60, 105, 0.97);
+            color: white;
+
+            padding: 12px 20px;
+
+            border-radius: 10px;
+
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+
+            backdrop-filter: blur(8px);
+        }
+
+        header h2 {
+            margin: 0;
+
+            font-size: 19px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        header p {
+            margin: 5px 0 0;
+
+            font-size: 12px;
+            color: #dbeafe;
+        }
+
+
+        /* ==========================================
+           4. TOMBOL PANEL INFORMASI
+        ========================================== */
+
+        #toggle-panel {
+            position: fixed;
+
+            top: 12px;
+            right: 12px;
+
+            z-index: 1100;
+
+            height: 57px;
+
+            padding: 0 15px;
+
+            border: none;
+            border-radius: 10px;
+
+            background: #123c69;
+            color: white;
+
+            font-size: 12px;
+            font-weight: bold;
+
+            cursor: pointer;
+
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        #toggle-panel:hover {
+            background: #1e568c;
+        }
+
+
+        /* ==========================================
+           5. PANEL INFORMASI STASIUN
+        ========================================== */
+
+        .panel {
+            position: fixed;
+
+            top: 85px;
+            right: 14px;
+            bottom: 14px;
+
+            width: 370px;
+
+            z-index: 1001;
+
+            background: rgba(255, 255, 255, 0.97);
+
+            padding: 20px;
+
+            border-radius: 12px;
+
+            overflow-y: auto;
+
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+
+            backdrop-filter: blur(10px);
+        }
+
+        .panel.hidden {
+            display: none;
+        }
+
+        .panel h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+
+            color: #123c69;
+
+            font-size: 16px;
+        }
+
+        .info {
+            line-height: 1.9;
+
+            font-size: 13px;
+            color: #334155;
+        }
+
+
+        /* ==========================================
+           6. GRAFIK TIME SERIES
+        ========================================== */
+
+        .chart-container {
+            position: relative;
+
+            height: 250px;
+
+            width: 100%;
+
+            margin-top: 15px;
+        }
+
+        #chart-title {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+
+        /* ==========================================
+           7. LEGENDA VUP
+        ========================================== */
+
+        .legend {
+            position: fixed;
+
+            left: 14px;
+            bottom: 14px;
+
+            z-index: 1000;
+
+            background: rgba(255, 255, 255, 0.96);
+
+            padding: 15px 20px;
+
+            border-radius: 10px;
+
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.2);
+
+            line-height: 2;
+            font-size: 13px;
+
+            backdrop-filter: blur(8px);
+        }
+
+        .legend h4 {
+            margin: 0 0 8px;
+
+            color: #123c69;
+            font-size: 13px;
+        }
+
+        .dot {
+            display: inline-block;
+
+            width: 11px;
+            height: 11px;
+
+            border-radius: 50%;
+
+            margin-right: 8px;
+        }
+
+
+        /* ==========================================
+           8. SKALA PETA
+        ========================================== */
+
+        .leaflet-control-scale {
+            margin-top: 8px !important;
+            margin-bottom: 8px !important;
+        }
+
+        .leaflet-control-scale-line {
+            background: rgba(255, 255, 255, 0.95);
+
+            color: #123c69;
+
+            border: 2px solid #123c69;
+            border-top: none;
+
+            font-weight: bold;
+            font-size: 11px;
+
+            padding: 2px 5px;
+        }
+
+
+        /* ==========================================
+           9. ARAH UTARA / NORTH ARROW
+        ========================================== */
+
+        .north-arrow-control {
+            width: 44px;
+            height: 58px;
+
+            background: rgba(255, 255, 255, 0.96);
+
+            border-radius: 6px;
+
+            display: flex;
+            flex-direction: column;
+
+            align-items: center;
+            justify-content: center;
+
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+
+            cursor: default;
+        }
+
+        .north-label {
+            font-size: 13px;
+            font-weight: bold;
+
+            color: #123c69;
+
+            margin-bottom: 3px;
+        }
+
+        .north-arrow {
+            width: 0;
+            height: 0;
+
+            border-left: 9px solid transparent;
+            border-right: 9px solid transparent;
+
+            border-bottom: 25px solid #123c69;
+        }
+
+
+        /* ==========================================
+           10. PENGATURAN KONTROL LEAFLET
+        ========================================== */
+
+        .leaflet-top.leaflet-left {
+            top: 75px;
+        }
+
+        .leaflet-control-attribution {
+            font-size: 10px;
+        }
+
+
+        /* ==========================================
+           11. RESPONSIVE MOBILE
+        ========================================== */
+
+        @media (max-width: 700px) {
+
+            header {
+                top: 8px;
+                left: 8px;
+                right: 65px;
+
+                padding: 10px 12px;
+            }
+
+            header h2 {
+                font-size: 14px;
+            }
+
+            header p {
+                font-size: 10px;
+            }
+
+            #toggle-panel {
+                top: 8px;
+                right: 8px;
+
+                width: 48px;
+                height: 52px;
+
+                padding: 0;
+
+                font-size: 0;
+            }
+
+            #toggle-panel::after {
+                content: "☰";
+                font-size: 20px;
+            }
+
+            .panel {
+                top: 75px;
+                left: 8px;
+                right: 8px;
+                bottom: 90px;
+
+                width: auto;
+
+                padding: 15px;
+            }
+
+            .legend {
+                left: 8px;
+                bottom: 8px;
+
+                padding: 8px 12px;
+
+                font-size: 11px;
+            }
+
+            .legend h4 {
+                font-size: 12px;
+            }
+
+            .chart-container {
+                height: 190px;
+            }
+
+            .leaflet-top.leaflet-left {
+                top: 65px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- ==========================================
+     HEADER APLIKASI
+========================================== -->
+
+<header>
+
+    <h2>SUBSIDENCE SURFACE</h2>
+
+    <p>CTRA TEAM</p>
+
+</header>
+
+
+
+<!-- ==========================================
+     TOMBOL PANEL
+========================================== -->
+
+<button
+    id="toggle-panel"
+    aria-expanded="true"
+>
+    Tutup Panel
+</button>
+
+
+
+<!-- ==========================================
+     PETA UTAMA
+========================================== -->
+
+<div id="map"></div>
+
+
+
+<!-- ==========================================
+     PANEL INFORMASI STASIUN
+========================================== -->
+
+<div class="panel" id="info-panel">
+
+    <h3>Informasi Stasiun</h3>
+
+    <hr>
+
+    <div id="info" class="info">
+
+        Klik salah satu titik GNSS pada peta.
+
+    </div>
+
+    <hr>
+
+    <h3>Time Series Perpindahan Vertikal</h3>
+
+    <p id="chart-title">
+
+        Pilih stasiun untuk melihat grafik.
+
+    </p>
+
+    <div class="chart-container">
+
+        <canvas id="timeChart"></canvas>
+
+    </div>
+
+</div>
+
+
+
+<!-- ==========================================
+     LEGENDA VUP
+========================================== -->
+
+<div class="legend">
+
+    <h4>Legenda VUP</h4>
+
+    <div>
+        <span
+            class="dot"
+            style="background:#b91c1c"
+        ></span>
+
+        Penurunan tinggi
+    </div>
+
+    <div>
+        <span
+            class="dot"
+            style="background:#f97316"
+        ></span>
+
+        Penurunan sedang
+    </div>
+
+    <div>
+        <span
+            class="dot"
+            style="background:#facc15"
+        ></span>
+
+        Penurunan rendah
+    </div>
+
+    <div>
+        <span
+            class="dot"
+            style="background:#16a34a"
+        ></span>
+
+        Kenaikan
+    </div>
+
+</div>
+
+
+
+<!-- ==========================================
+     LEAFLET JAVASCRIPT
+========================================== -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+
+<script>
+
+
+// ==============================================
+// 1. MEMBUAT PETA
+// ==============================================
+
+const map = L.map('map', {
+
+    zoomControl: true,
+
+    attributionControl: true
+
+}).setView(
+
+    [-5.42, 105.26],
+
+    12
+
+);
+
+
+// BASEMAP OPENSTREETMAP
+
+L.tileLayer(
+
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+
+    {
+
+        attribution: '&copy; OpenStreetMap contributors',
+
+        maxZoom: 19
+
+    }
+
+).addTo(map);
+
+
+
+// ==============================================
+// 2. SKALA PETA
+// ==============================================
+
+L.control.scale({
+
+    position: 'topleft',
+
+    maxWidth: 150,
+
+    metric: true,
+
+    imperial: false,
+
+    updateWhenIdle: false
+
+}).addTo(map);
+
+
+
+// ==============================================
+// 3. ARAH UTARA / NORTH ARROW
+// ==============================================
+
+const NorthArrow = L.Control.extend({
+
+    options: {
+
+        position: 'topleft'
+
+    },
+
+    onAdd: function(map) {
+
+        const container = L.DomUtil.create(
+
+            'div',
+
+            'north-arrow-control'
+
+        );
+
+        container.innerHTML = `
+
+            <div class="north-label">N</div>
+
+            <div class="north-arrow"></div>
+
+        `;
+
+        container.title = 'Arah Utara';
+
+        L.DomEvent.disableClickPropagation(container);
+
+        L.DomEvent.disableScrollPropagation(container);
+
+        return container;
+
+    }
+
+});
+
+map.addControl(new NorthArrow());
+
+
+
+// ==============================================
+// 4. PANEL INFORMASI
+// ==============================================
+
+const panel = document.getElementById(
+
+    'info-panel'
+
+);
+
+const toggleButton = document.getElementById(
+
+    'toggle-panel'
+
+);
+
+
+toggleButton.addEventListener('click', function() {
+
+    const hidden = panel.classList.toggle('hidden');
+
+    toggleButton.textContent = hidden
+
+        ? 'Buka Panel'
+
+        : 'Tutup Panel';
+
+    toggleButton.setAttribute(
+
+        'aria-expanded',
+
+        String(!hidden)
+
+    );
+
+});
+
+
+
+// ==============================================
+// 5. FUNGSI WARNA VUP
+// ==============================================
+
+function getColor(v) {
+
+    if (v < -10) {
+
+        return '#b91c1c';
+
+    }
+
+    if (v < -5) {
+
+        return '#f97316';
+
+    }
+
+    if (v < 0) {
+
+        return '#facc15';
+
+    }
+
+    return '#16a34a';
+
+}
+
+
+
+// ==============================================
+// 6. MEMBACA CSV TIME SERIES
+// ==============================================
+
+let timeSeriesData = {};
+
+
+async function loadTimeSeries() {
+
+    const response = await fetch(
+
+        'data/timeseries_gnss_bandar_lampung_20.csv'
+
+    );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+
+            'CSV time series tidak ditemukan'
+
+        );
+
+    }
+
+
+    const csv = await response.text();
+
+
+    const rows = csv.trim().split(/\r?\n/);
+
+
+    rows.slice(1).forEach(row => {
+
+        const col = row.split(',');
+
+
+        const id = col[0];
+
+        const tanggal = col[1];
+
+        const perpindahan = Number(col[5]);
+
+
+        if (!timeSeriesData[id]) {
+
+            timeSeriesData[id] = {
+
+                labels: [],
+
+                values: []
+
+            };
+
+        }
+
+
+        timeSeriesData[id].labels.push(
+
+            tanggal
+
+        );
+
+
+        timeSeriesData[id].values.push(
+
+            perpindahan
+
+        );
+
+    });
+
+
+    console.log(
+
+        'Data time series berhasil dimuat!'
+
+    );
+
+}
+
+
+
+// ==============================================
+// 7. MEMBUAT GRAFIK TIME SERIES
+// ==============================================
+
+let chart = null;
+
+
+function showTimeSeries(id) {
+
+    const data = timeSeriesData[id];
+
+
+    if (!data || data.labels.length === 0) {
+
+        if (chart) {
+
+            chart.destroy();
+
+            chart = null;
+
+        }
+
+        document.getElementById(
+
+            'chart-title'
+
+        ).innerText =
+
+            'Data time series stasiun ' +
+
+            id +
+
+            ' tidak ditemukan.';
+
+        return;
+
+    }
+
+
+    document.getElementById(
+
+        'chart-title'
+
+    ).innerText =
+
+        'Grafik perpindahan stasiun ' + id;
+
+
+    if (chart) {
+
+        chart.destroy();
+
+        chart = null;
+
+    }
+
+
+    const ctx = document.getElementById(
+
+        'timeChart'
+
+    );
+
+
+    chart = new Chart(ctx, {
+
+        type: 'line',
+
+
+        data: {
+
+            labels: data.labels,
+
+
+            datasets: [{
+
+                label: 'Perpindahan vertikal (mm)',
+
+                data: data.values,
+
+                borderColor: '#2563eb',
+
+                backgroundColor: 'rgba(37,99,235,0.12)',
+
+                borderWidth: 2,
+
+                pointRadius: 2,
+
+                pointHoverRadius: 5,
+
+                pointBackgroundColor: '#2563eb',
+
+                fill: true,
+
+                tension: 0.2
+
+            }]
+
+        },
+
+
+        options: {
+
+            responsive: true,
+
+            maintainAspectRatio: false,
+
+
+            interaction: {
+
+                intersect: false,
+
+                mode: 'index'
+
+            },
+
+
+            plugins: {
+
+                legend: {
+
+                    display: true
+
+                },
+
+                tooltip: {
+
+                    enabled: true
+
+                }
+
+            },
+
+
+            scales: {
+
+                x: {
+
+                    title: {
+
+                        display: true,
+
+                        text: 'Tanggal pengamatan'
+
+                    },
+
+                    ticks: {
+
+                        maxTicksLimit: 8
+
+                    }
+
+                },
+
+
+                y: {
+
+                    title: {
+
+                        display: true,
+
+                        text: 'Perpindahan (mm)'
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    });
+
+}
+
+
+
+// ==============================================
+// 8. MEMBACA GEOJSON STASIUN GNSS
+// ==============================================
+
+async function loadStations() {
+
+    const response = await fetch(
+
+        'data/stasiun_gnss_bandar_lampung_20.geojson'
+
+    );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+
+            'GeoJSON tidak ditemukan'
+
+        );
+
+    }
+
+
+    const geojson = await response.json();
+
+
+    const layer = L.geoJSON(geojson, {
+
+
+        // MEMBUAT SIMBOL TITIK GNSS
+
+        pointToLayer: function(feature, latlng) {
+
+            const v = Number(
+
+                feature.properties.VUP_mm_tahun
+
+            );
+
+
+            return L.circleMarker(latlng, {
+
+                radius: 8,
+
+                fillColor: getColor(v),
+
+                color: '#222',
+
+                weight: 1,
+
+                fillOpacity: 0.9
+
+            });
+
+        },
+
+
+        // INTERAKSI KETIKA TITIK DIKLIK
+
+        onEachFeature: function(feature, layer) {
+
+            layer.on('click', function() {
+
+                const p = feature.properties;
+
+
+                // MENAMPILKAN INFORMASI STASIUN
+
+                document.getElementById(
+
+                    'info'
+
+                ).innerHTML = `
+
+                    <b>ID Stasiun:</b>
+
+                    ${p.station_id}
+
+                    <br>
+
+
+                    <b>Kecamatan:</b>
+
+                    ${p.kecamatan}
+
+                    <br>
+
+
+                    <b>Kecepatan Vertikal:</b>
+
+                    ${p.VUP_mm_tahun} mm/tahun
+
+                    <br>
+
+
+                    <b>Jenis Data:</b>
+
+                    ${p.jenis_data}
+
+                `;
+
+
+                // MENAMPILKAN GRAFIK BERDASARKAN ID
+
+                showTimeSeries(p.station_id);
+
+            });
+
+        }
+
+    }).addTo(map);
+
+
+
+    // ZOOM OTOMATIS KE SELURUH STASIUN
+
+    if (layer.getBounds().isValid()) {
+
+        map.fitBounds(
+
+            layer.getBounds(),
+
+            {
+
+                padding: [50, 50],
+
+                maxZoom: 14
+
+            }
+
+        );
+
+    }
+
+
+    console.log(
+
+        'Data stasiun GNSS berhasil dimuat!'
+
+    );
+
+}
+
+
+
+// ==============================================
+// 9. MENJALANKAN SELURUH DATA
+// ==============================================
+
+async function init() {
+
+    try {
+
+        await Promise.all([
+
+            loadTimeSeries(),
+
+            loadStations()
+
+        ]);
+
+
+        console.log(
+
+            'SUBSIDENCE SURFACE berhasil dimuat!'
+
+        );
+
+    }
+
+
+    catch(error) {
+
+        console.error(error);
+
+
+        alert(
+
+            'Gagal memuat data. Periksa folder dan nama file.'
+
+        );
+
+    }
+
+}
+
+
+
+// MENJALANKAN APLIKASI
+
+init();
+
+
+</script>
+
+
+</body>
+
+</html>
